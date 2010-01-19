@@ -5,3 +5,5 @@ starxos.vtg
 floppy.img
 *.o
 starxos
+a.out
+*.cpp

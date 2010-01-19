@@ -12,3 +12,6 @@ update: build floppy.img
 	sudo cp src/starxos /mnt/
 	sudo cp taiobf.lst /mnt/boot/grub/
 	sudo umount /mnt
+
+kvm: update
+	kvm -fda floppy.img -m 64

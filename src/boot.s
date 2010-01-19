@@ -1,47 +1,67 @@
-;
-; boot.s -- Kernel start location. Also defines multiboot header.
-; Based on Bran's kernel development tutorial file start.asm
-;
 
-MBOOT_PAGE_ALIGN    equ 1<<0    ; Load kernel and modules on a page boundary
-MBOOT_MEM_INFO      equ 1<<1    ; Provide your kernel with memory info
-MBOOT_HEADER_MAGIC  equ 0x1BADB002 ; Multiboot Magic value
-; NOTE: We do not use MBOOT_AOUT_KLUDGE. It means that GRUB does not
-; pass us a symbol table.
-MBOOT_HEADER_FLAGS  equ MBOOT_PAGE_ALIGN | MBOOT_MEM_INFO
-MBOOT_CHECKSUM      equ -(MBOOT_HEADER_MAGIC + MBOOT_HEADER_FLAGS)
+/* The size of our stack (16KB). */
+#define STACK_SIZE 0x4000
 
-bits 32
-global multibootheader
-extern code
-extern bss
-extern end
+#define MULTIBOOT_HEADER_MAGIC 0x1BADB002
 
-multibootheader:
-  dd  MBOOT_HEADER_MAGIC		; GRUB will search for this value on each
-                                ; 4-byte boundary in your kernel file
-  dd  MBOOT_HEADER_FLAGS		; How GRUB should load your file / settings
-  dd  MBOOT_CHECKSUM			; To ensure that the above values are correct
+#define MULTIBOOT_HEADER_FLAGS 0x00000003
 
-  dd  multibootheader			; Location of this descriptor
-  dd  code						; Start of kernel '.text' (code) section.
-  dd  bss						; End of kernel '.data' section.
-  dd  end						; End of kernel.
-  dd  start						; Kernel entry point (initial EIP).
+.text
 
-global start
-extern start_kernel
+.globl start, _start
 
 start:
-	mov esp, stack+0x4000
-	push eax
-	push ebx
+_start:
+ jmp multiboot_entry
 
-	cli
-	call start_kernel
-	jmp $
+ /* Align 32 bits boundary. */
+ .align  4
 
-section .bss
-align 32
-stack:
-	resb 0x4000
+ /* Multiboot header. */
+multiboot_header:
+ /* magic */
+ .long MULTIBOOT_HEADER_MAGIC
+ /* flags */
+ .long MULTIBOOT_HEADER_FLAGS
+ /* checksum */
+ .long -(MULTIBOOT_HEADER_MAGIC + MULTIBOOT_HEADER_FLAGS)
+ /* header_addr */
+  .long multiboot_header
+  .long code
+  .long data
+  .long bss
+  .long end
+ /* entry_addr */
+  .long multiboot_entry
+   
+multiboot_entry:
+ /* Initialize the stack pointer. */
+ movl $(stack + 0x4000), %esp
+
+ /* Reset EFLAGS. */
+ pushl $0
+ popf
+
+ /* Push the pointer to the Multiboot information structure. */
+ pushl %ebx
+ /* Push the magic value. */
+ pushl %eax
+
+ /* Now enter the C main function... */
+ cli
+ call start_kernel
+
+ /* Halt. */
+ pushl $0
+ pushl $halt_message
+ pushl $0
+ call sprintf
+
+loop: hlt
+  jmp loop
+
+halt_message:
+  .asciz  "Halted."
+
+ /* Our stack area. */
+ .comm stack, STACK_SIZE

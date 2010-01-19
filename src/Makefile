@@ -7,7 +7,7 @@ ASFLAGS=-felf
 
 BUILD_DIR=../output
 
-SOURCES=boot.o kernel.o screen.o
+SOURCES=boot.o kernel.o screen.o port.o stdio.o string.o gdt_idt.o gdt_idt_asm.o
 
 all: $(SOURCES) link 
 
@@ -18,8 +18,12 @@ link:
 	ld $(LDFLAGS) -o starxos $(SOURCES)
 
 .s.o:
-	nasm $(ASFLAGS) $<
+	-rm $*.o
+	cpp -I. $*.s > $*.s.cpp
+	as $*.s.cpp -o $*.o
+	#rm boot.s.cpp
 
 clean:
-	rm *.o
-	rm starxos
+	-rm *.o
+	-rm starxos
+	-rm *.cpp

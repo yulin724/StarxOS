@@ -1,4 +1,4 @@
-ENTRY(start_kernel)
+ENTRY(start)
 
 SECTIONS
 {
