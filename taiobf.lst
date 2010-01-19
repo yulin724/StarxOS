@@ -1,0 +1,49 @@
+default 2
+
+title [license] ³ All in One Boot Floppy 1.0  ³ (c) 2006-08 Michael Schierl
+catf /boot/grub/license.tct
+
+title [info]    ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+cat /boot/grub/taiobf.txt
+pause Press any key.
+
+title StarxOS
+kernel /starxos
+
+title Keyboard Configuration                                    ÄÄ
+configfile /boot/grub/keyboard.lst
+
+title Load Smart Boot Manager (can boot from CD drives)
+kernel /boot/sbootmgr.lkr
+
+title Load FreeDOS (+ lots of tools)
+chainloader /boot/bootsect.or
+
+title Load gPXE (boot from network) [Hit Ctrl+B for command line]
+kernel /boot/gpxe.lkr
+
+title Load GRUB2 (command line mode)
+kernel /boot/grub2/core.img
+
+title Memtest86 memory tester (for older computers)
+kernel /boot/memtest.bin
+
+title Memtest86+ memory tester (for recent computers)
+kernel /boot/mt86plus.bin
+
+title GRUB templates (for booting systems on Hard Disk)         ÄÄ
+cat /boot/grub/template.txt
+pause Press a key to view templates.
+configfile /boot/grub/template.lst
+
+title Select Color Scheme                                       ÄÄ
+configfile /boot/grub/color.lst
+
+title Play GRUB-Invaders
+kernel /boot/invaders.mb
+
+title Reboot
+reboot
+
+title Halt
+halt
