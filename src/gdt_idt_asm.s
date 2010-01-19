@@ -66,10 +66,19 @@ iodelay:
 	nop
 	ret
 
+/*
 do_IRQ:
 	movl 4(%esp), %eax
 	ret
+*/
 
+.global load_idt
+load_idt:
+	cli
+	movl 4(%esp), %eax
+	lidt (%eax)
+	sti
+	ret
 
 /* macros for generating idt_entries */
 
@@ -95,9 +104,9 @@ do_IRQ:
 .endm
 
 .data
-.global idt_entries
-idt_entries:
+.global idt_handlers
+idt_handlers:
 .text
-	IRQ_STUBS 0 2 do_IRQ
+	IRQ_STUBS 0 255 do_IRQ
 
 	

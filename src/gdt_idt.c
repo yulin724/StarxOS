@@ -17,9 +17,9 @@
 	((struct desc_struct)GDT_ENTRY_INIT(0xc09b, 0, 0xfffff))
 #define FULL_SEGMENT ((struct desc_struct)GDT_ENTRY_INIT(0xc093, 0, 0xfffff))
 
-
 static struct desc_struct gdt_entries[GDT_ENTRY_MAX];
-extern struct desc_struct idt_entries;
+static struct desc_struct idt_entries[IDT_ENTRY_MAX];
+extern long idt_handlers[];
 
 void initialize_gdt()
 {
@@ -34,33 +34,25 @@ void initialize_gdt()
 	load_gdt(&desc_ptr);
 }
 
-struct desc_struct {
-	union {
-		struct {
-			unsigned int a;
-			unsigned int b;
-		};
-		struct {
-			u16int limit0;
-			u16int base0;
-			unsigned base1: 8, type: 4, s: 1, dpl: 2, p: 1;
-			unsigned limit: 4, avl: 1, l: 1, d: 1, g: 1, base2: 8;
-		};
-	};
-} __attribute__((packed));
-
-static void idt_set_gate(u8int num, u32int base, u16int sel, u8int flags)
-{
-	idt_entries[num].base0
-}
-
 void initialize_idt()
 {
 	int i=0;
+	struct desc_ptr desc_ptr;
 	
 	initialize_8259a();
 	
-	for(i=0; i < IDT_ENTRY_MAX; i++) {
-		
+	for(i=0; i < 2; i++) {
+		//printf("%x\n", idt_handlers[i] );
+		idt_entries[i].a = ( 0x8 ) << 16 | (idt_handlers[i] & 0xFFFF);
+		idt_entries[i].b = ( idt_handlers[i] & 0xFFFF0000 ) | 0x8E00;
 	}
+	
+	desc_ptr.size = sizeof(idt_entries);
+	desc_ptr.address = &idt_entries;
+	
+	load_idt(&desc_ptr);
+}
+
+void do_IRQ(int eax)
+{
 }
