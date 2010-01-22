@@ -1,0 +1,4 @@
+timeout 0
+color light-gray/blue yellow/blue
+title The All In One Boot Floppy
+configfile /boot/grub/taiobf.lst

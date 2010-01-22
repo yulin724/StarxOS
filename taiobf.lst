@@ -1,4 +1,5 @@
 default 2
+timeout 1
 
 title [license] ³ All in One Boot Floppy 1.0  ³ (c) 2006-08 Michael Schierl
 catf /boot/grub/license.tct

@@ -1,17 +1,33 @@
+DEBUGCON=$(shell tty)
+
 all: build update
 
-build:
+build: clean
 	make -C src
+
+clean:
+	make -C src clean
 
 floppy.img:
 	tools/create_floopy_image.sh
 	mv allinone.img floppy.img
 
-update: build floppy.img
-	sudo mount -o loop floppy.img /mnt/ -t msdos	
-	sudo cp src/starxos /mnt/
-	sudo cp taiobf.lst /mnt/boot/grub/
-	sudo umount /mnt
+update: build
+	@sudo mount -o loop floppy.img /mnt/ -t msdos	
+	@sudo cp src/starxos /mnt/ -v
+	@sudo cp taiobf.lst /mnt/boot/grub/
+	@sudo cp menu.lst /mnt/boot/grub/
+	@sudo umount /mnt
 
 kvm: update
-	kvm -fda floppy.img -m 64
+	kvm -fda floppy.img -m 64 -boot a
+
+qemu: update
+	@stty -F $(DEBUGCON) --save > stty.save
+	/usr/local/bin/qemu -fda floppy.img -m 64 -boot a -debugcon $(DEBUGCON)
+	@stty -F $(DEBUGCON) `cat stty.save`
+	@rm stty.save
+
+bochs: update
+	#/usr/bin/bochs
+	bochs -f bochsrc_term -q

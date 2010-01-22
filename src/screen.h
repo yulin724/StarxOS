@@ -19,7 +19,7 @@ void set_screen_color(int index, u8int color);
 void set_color(u8int color);
 
 void putchar_at_screen(int index, u8int color, u8int c);
-void putchar(u8int c);
+//void putchar(u8int c);
 
 void putstring_at_screen(int index, u8int color, char *string);
 void putstring(u8int *string);

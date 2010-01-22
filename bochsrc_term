@@ -51,7 +51,8 @@ config_interface: textconfig
 #display_library: term
 #display_library: wx
 #display_library: x, options="hideIPS" # disable IPS output in status bar
-display_library: x, options="gui_debug" # use GTK debugger gui
+#display_library: x, options="gui_debug" # use GTK debugger gui
+display_library: x
 
 #=======================================================================
 # ROMIMAGE:
@@ -128,8 +129,8 @@ romimage: file=/usr/share/bochs/BIOS-bochs-latest
 #  2.2.6 2.1Ghz Athlon XP with Linux 2.6/g++ 3.4         12 to 15 Mips
 #  2.0.1 1.6Ghz Intel P4 with Win2000/g++ 3.3             5 to  7 Mips
 #=======================================================================
-cpu: count=1, ips=200000, reset_on_triple_fault=1, cpuid_limit_winnt=0, msrs="msrs.def"
-#cpu: count=1, ips=200000
+#cpu: count=1, ips=200000, reset_on_triple_fault=1, cpuid_limit_winnt=0, msrs="msrs.def"
+cpu: count=1, ips=200000
 
 #=======================================================================
 # MEGS
@@ -778,7 +779,7 @@ i440fxsupport: enabled=1
 # Example:
 #   port_e9_hack: enabled=1
 #=======================================================================
-#port_e9_hack: enabled=1
+port_e9_hack: enabled=1
 
 #=======================================================================
 # DEBUG_SYMBOLS:
@@ -790,7 +791,7 @@ i440fxsupport: enabled=1
 #   debug_symbols: file="kernel.sym"
 #   debug_symbols: file="kernel.sym", offset=0x80000000
 #=======================================================================
-#debug_symbols: file="kernel.sym"
+debug_symbols: file="src/starxos.sym"
 
 #=======================================================================
 # other stuff
@@ -798,7 +799,7 @@ i440fxsupport: enabled=1
 #load32bitOSImage: os=nullkernel, path=../kernel.img, iolog=../vga_io.log
 #load32bitOSImage: os=linux, path=../linux.img, iolog=../vga_io.log, initrd=../initrd.img
 #text_snapshot_check: enabled=1
-#print_timestamps: enabled=1
+print_timestamps: enabled=1
 
 #-------------------------
 # PCI host device mapping

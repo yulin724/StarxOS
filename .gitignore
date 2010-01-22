@@ -1,3 +1,4 @@
+snapshot.txt
 starxos.vpj
 starxos.vpw
 starxos.vpwhistu
@@ -7,3 +8,5 @@ floppy.img
 starxos
 a.out
 *.cpp
+*.sym
+*save
