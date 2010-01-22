@@ -1,9 +1,22 @@
-commit 7c2e9945a234f3ce3c1425032ea626f674e911ad
-Author: lyu0 <lyu0@lyu0-work-desktop.(none)>
-Date:   Fri Jan 22 20:22:52 2010 +0800
+commit 17d86be072f37393eb7eb5ddc7a132a46a551a3e
+Author: lyu0 <lyu0@lyu0-quad.(none)>
+Date:   Fri Jan 22 22:10:26 2010 +0800
 
-    fix patch
+    debugcon patch
 
+diff --git a/Makefile.target b/Makefile.target
+index 7c1f30c..0a803ef 100644
+--- a/Makefile.target
++++ b/Makefile.target
+@@ -194,7 +194,7 @@ obj-i386-y += fdc.o mc146818rtc.o serial.o i8259.o i8254.o pcspk.o pc.o
+ obj-i386-y += cirrus_vga.o apic.o ioapic.o parallel.o acpi.o piix_pci.o
+ obj-i386-y += usb-uhci.o vmmouse.o vmport.o vmware_vga.o hpet.o
+ obj-i386-y += device-hotplug.o pci-hotplug.o smbios.o wdt_ib700.o
+-obj-i386-y += ne2000-isa.o
++obj-i386-y += ne2000-isa.o debugcon.o
+ 
+ # shared objects
+ obj-ppc-y = ppc.o ide/core.o ide/qdev.o ide/isa.o ide/pci.o ide/macio.o
 diff --git a/hw/debugcon.c b/hw/debugcon.c
 new file mode 100644
 index 0000000..d549091
@@ -117,3 +130,48 @@ index 0000000..d549091
 +}
 +
 +device_init(debugcon_register_devices)
+diff --git a/qemu-options.hx b/qemu-options.hx
+index ecd50eb..9005fe8 100644
+--- a/qemu-options.hx
++++ b/qemu-options.hx
+@@ -1598,6 +1598,17 @@ STEXI
+ Setup monitor on chardev @var{name}.
+ ETEXI
+ 
++DEF("debugcon", HAS_ARG, QEMU_OPTION_debugcon, \
++    "-debugcon dev   redirect the debug console to char device 'dev'\n")
++STEXI
++@item -debugcon @var{dev}
++Redirect the debug console to host device @var{dev} (same devices as the
++serial port).  The debug console is an I/O port which is typically port
++0xe9; writing to that I/O port sends output to this device.
++The default device is @code{vc} in graphical mode and @code{stdio} in
++non graphical mode.
++ETEXI
++
+ DEF("pidfile", HAS_ARG, QEMU_OPTION_pidfile, \
+     "-pidfile file   write PID to 'file'\n")
+ STEXI
+diff --git a/vl.c b/vl.c
+index 007709a..fad9866 100644
+--- a/vl.c
++++ b/vl.c
+@@ -5390,6 +5390,18 @@ int main(int argc, char **argv, char **envp)
+                 add_device_config(DEV_PARALLEL, optarg);
+                 default_parallel = 0;
+                 break;
++            case QEMU_OPTION_debugcon:
++                if (!qemu_chr_open("debugcon", optarg, NULL)) {
++                    exit(1);
++                }
++                opts = qemu_opts_create(&qemu_device_opts, "debugcon", 1);
++                if (!opts) {
++                    fprintf(stderr, "qemu: already have a debugcon device\n");
++                    exit(1);
++                }
++                qemu_opt_set(opts, "driver", "isa-debugcon");
++                qemu_opt_set(opts, "chardev", "debugcon");
++                break;
+ 	    case QEMU_OPTION_loadvm:
+ 		loadvm = optarg;
+ 		break;
