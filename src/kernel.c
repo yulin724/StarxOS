@@ -27,7 +27,7 @@ int start_kernel(unsigned long magic, unsigned long addr)
 
     int i=0;
     int x=0,y=0;
-    void *ptr;
+    void *ptr1, *ptr2, *ptr3, *ptr4;
 
     initialize_gdt();
 
@@ -68,10 +68,16 @@ int start_kernel(unsigned long magic, unsigned long addr)
     mem_upper = mbi->mem_upper * 0x400;
 
     printf_bochs("init_mem\n");
-    init_memblk((long)&end, mem_upper);
-    print_memblk_list(1);
+    init_memblk((long)&end, ((long)&end) + 0x400000);
+    print_memblks_addr_list();
     printf_bochs("init_mem complete\n\n");
 
+
+    //do_test();
+
+    init_page(mem_lower, mem_upper);
+
+    bochs_shutdown();
 
     for(;;);
     return 0xBAD;

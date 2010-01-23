@@ -1,9 +1,11 @@
 #include "emulator.h"
 
 #include "port.h"
+#include "stdio.h"
 
 void bochs_shutdown()
 {
+    printf_bochs("Shutdown!\n");
     outb(0x8900, 'S');
     outb(0x8900, 'h');
     outb(0x8900, 'u');

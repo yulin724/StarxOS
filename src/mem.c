@@ -1,204 +1,313 @@
 #include "common.h"
 
-struct memblk_head {
+struct mcb {
     struct list_head memblk_size_list_node;
     struct list_head memblk_addr_list_node;
-    u32int size;
-    u8int available;
+    u32int start_addr;
+    u32int available;
 };
 
-struct list_head memblks_size;
-struct list_head memblks_addr;
+struct list_head memblks_by_size;
+struct list_head memblks_by_addr;
 
-struct memblk_head *init_one_memblk(u32int start_addr, u32int size) {
-    struct memblk_head *blk;
+u32int heap;
 
-    blk = (struct memblk_head *)start_addr;
-    blk->size = size - sizeof(struct memblk_head);
-
-    return blk;
+void panic() {
+    bochs_shutdown();
 }
 
-void print_memblk_list(u8int type)
+void print_memblks_addr_list()
 {
     struct list_head *p;
-    struct memblk_head *blk;
+    struct mcb *blk;
+    u32int prev_addr=0;
 
-    struct list_head *memblks_list;
+    printf_bochs("memblks_by_addr list\n");
+    printf_bochs("-------------------------------------------------\n");
+    list_for_each(p, &memblks_by_addr)
+    {
+        blk = list_entry(p, struct mcb, memblk_addr_list_node);
+        printf_bochs("mcb@%p, start@%x, avail:%x, size:%x\n",
+            blk, blk->start_addr, blk->available, (long)blk - blk->start_addr);
+        if ( (long)blk < prev_addr ) {
+            printf_bochs("!!!!!!! %s %s() %x: memblks_addr_list has error!!!\n",
+                __FILE__, __FUNCTION__, __LINE__);
+            panic();
+        }
+        prev_addr = (long)blk;
 
-#define SORTED_BY_SIZE 0
-#define SORTED_BY_ADDR 1
-
-    switch (type) {
-    case SORTED_BY_SIZE:
-        memblks_list = &memblks_size;
-        break;
-    case SORTED_BY_ADDR:
-        memblks_list = &memblks_addr;
-        break;
-    default:
-        memblks_list = &memblks_addr;
-        break;
     }
+    printf_bochs("=================================================\n");
+}
 
-    list_for_each(p, memblks_list) {
-        if ( type == SORTED_BY_SIZE )
-            blk = list_entry(p, struct memblk_head, memblk_size_list_node);
-        if ( type == SORTED_BY_ADDR )
-            blk = list_entry(p, struct memblk_head, memblk_addr_list_node);
-        printf_bochs("%x start at:%p, size:%x, available:%x\n", type, blk, blk->size, blk->available);
+void print_memblks_size_list()
+{
+    struct list_head *p;
+    struct mcb *blk;
+    u32int prev_size=0;
+
+    printf_bochs("memblks_by_size list\n");
+    printf_bochs("-------------------------------------------------\n");
+    list_for_each(p, &memblks_by_size)
+    {
+        blk = list_entry(p, struct mcb, memblk_size_list_node);
+        printf_bochs("mcb@%p, start@%x, avail:%x, size:%x\n",
+            blk, blk->start_addr, blk->available, (long)blk - blk->start_addr);
+        if ( (long)blk - blk->start_addr < prev_size ) {
+            printf_bochs("!!!!!!! %s %s() %x: memblks_size_list has error!!!\n",
+                __FILE__, __FUNCTION__, __LINE__);
+            panic();
+        }
+        prev_size = (long)blk - blk->start_addr;
+
     }
+    printf_bochs("=================================================\n");
 }
 
 void init_memblk(u32int mem_lower, u32int mem_upper)
 {
-    struct memblk_head *blk;
+    struct mcb *first_memblk;
+    u32int whole_size;
 
-    INIT_LIST_HEAD( &memblks_size );
-    INIT_LIST_HEAD( &memblks_addr );
+    INIT_LIST_HEAD( &memblks_by_size );
+    INIT_LIST_HEAD( &memblks_by_addr );
 
     verbose("init_mem\n");
-    blk = init_one_memblk(mem_lower, mem_upper - mem_lower);
-    blk->available = 1;
-    list_add( &(blk->memblk_size_list_node), &memblks_size);
-    list_add( &(blk->memblk_addr_list_node), &memblks_addr);
+
+    whole_size = mem_upper - mem_lower;
+    heap = mem_upper;
+
+    first_memblk = (struct mcb *)( mem_lower + whole_size - sizeof(struct mcb) );
+    memset(first_memblk, 0, sizeof(struct mcb));
+    first_memblk->start_addr = mem_lower;
+    first_memblk->available = 1;
+
+    list_add( &(first_memblk->memblk_size_list_node), &memblks_by_size);
+    list_add( &(first_memblk->memblk_addr_list_node), &memblks_by_addr);
 }
 
-void insert_sort_by_size(struct list_head *new,struct list_head *head)
+void insert_sort_by_size(struct list_head *to_insert,struct list_head *head)
 {
-    struct list_head *blk_list_head;
-    struct memblk_head *new_blk;
-    struct memblk_head *curr;
     struct list_head *p;
+    struct mcb *to_insert_mcb, *p_mcb;
+    u32int to_insert_size, p_size;
 
-    blk_list_head = new;
-    new_blk = list_entry(new, struct memblk_head, memblk_size_list_node);
+    to_insert_mcb = list_entry(to_insert, struct mcb, memblk_size_list_node);
+    to_insert_size = (long)to_insert_mcb - to_insert_mcb->start_addr;
 
-    verbose("3. try to insert blk %p\n", new_blk);
+    printf_bochs("trying to insert mcb@%p into memblks_by_size \n", to_insert_mcb);
 
-    list_for_each(p, &memblks_size) {
-        curr = list_entry(p, struct memblk_head, memblk_size_list_node);
+    list_for_each(p, &memblks_by_size) {
+        p_mcb = list_entry(p, struct mcb, memblk_size_list_node);
+        p_size = (long)p_mcb - p_mcb->start_addr;
+        if ( to_insert_size <= p_size) {
+            // we found some element's size bigger than my own.
+            p->prev->next = to_insert;
+            to_insert->prev = p->prev;
 
-        if ( new_blk->size <= curr->size ) {
-            p->prev->next = new;
-            new->prev = p->prev;
-            new->next = p;
-            p->prev = new;
+            to_insert->next = p;
+            p->prev = to_insert;
             return;
         }
-
     }
-    list_add_tail(new, &memblks_size);
+    // this block's size is bigger than all others.
+    list_add_tail(to_insert, &memblks_by_size);
 }
 
-struct memblk_head* split_from(struct memblk_head *orig_blk, u32int size) {
-    struct memblk_head *blk;
-
-    if ( orig_blk->size > size + sizeof(struct memblk_head) ) {
-        blk = (struct memblk_head *)( ((u32int)(orig_blk+1)) + size);
-
-        blk->size = orig_blk->size - size - sizeof(struct memblk_head);
-        blk->available = 1;
-        verbose("2. cut %x from %p. new blk:%p, size:%x, available:%x\n",
-                size, orig_blk, blk, blk->size, blk->available);
-
-        orig_blk->available = 0;
-        orig_blk->size = size;
-
-        if ( (&memblks_size)->next->next == (&memblks_size) ) {
-            verbose("only 1 memblk in list\n");
-            list_add_tail( &(blk->memblk_size_list_node), &memblks_size );
-            list_add_tail( &(blk->memblk_addr_list_node), &memblks_addr );
-            return orig_blk;
-        }
-
-        list_del( &(orig_blk->memblk_size_list_node) );
-        insert_sort_by_size( &(orig_blk->memblk_size_list_node), &memblks_size );
-        insert_sort_by_size( &(blk->memblk_size_list_node), &memblks_size );
-
-        {   // add new element, sorted by address
-            struct list_head *curr, *new, *next;
-            curr = &(orig_blk->memblk_addr_list_node);
-            new  = &(blk->memblk_addr_list_node);
-            next = curr->next;
-
-            curr->next = new;
-            new->prev = curr;
-            new->next = next;
-            next->prev = new;
-        }
-    }
-
-    return orig_blk;
-}
-
-static void try_merge(struct list_head *p)
+struct mcb* split_from(struct mcb *orig_blk, u32int size, int align)
 {
-    struct memblk_head *curr_memblk, *next_memblk;
+    struct mcb *mcb1, *mcb2;
+    u32int orig_blk_start_addr;
+    u32int orig_blk_available;
 
-    curr_memblk = list_entry(p, struct memblk_head, memblk_addr_list_node);
-    next_memblk = list_entry(p->next, struct memblk_head, memblk_addr_list_node);
+    struct list_head *p, *p_mcb1, *p_mcb2;
 
-    if ( curr_memblk->available && next_memblk->available
-         && (long)(curr_memblk+1) +  curr_memblk->size == (long)next_memblk )
+    orig_blk_start_addr = orig_blk->start_addr;
+    orig_blk_available = orig_blk->available;
+
+    // this mcb2 is the return value
+    mcb2 = orig_blk;
+    // adjust mcb2, start_addr and aligned start_address
+    if (align) {
+        mcb2->start_addr = ( (long)mcb2 - size ) & 0xFFFFF000;
+    } else {
+        mcb2->start_addr = ( (long)mcb2 - size );
+    }
+    mcb2->available = 0;
+    size = (long)mcb2 - mcb2->start_addr;
+
+    // create new mcb1, adjust mcb1
+    mcb1 = (struct mcb*)( mcb2->start_addr - sizeof(struct mcb) );
+    memset(mcb1, 0, sizeof(struct mcb));
+    mcb1->start_addr = orig_blk_start_addr;
+    mcb1->available = 1;
+
+    printf_bochs("orig@%p, start_addr@%x, avail:%x\n", orig_blk, orig_blk_start_addr, orig_blk_available);
+    printf_bochs("mcb1@%p, start_addr@%x, avail:%x, size:%x\n", mcb1, mcb1->start_addr, mcb1->available, (long)mcb1 - mcb1->start_addr);
+    printf_bochs("mcb2@%p, start_addr@%x, avail:%x, size:%x\n", mcb2, mcb2->start_addr, mcb2->available, (long)mcb2 - mcb2->start_addr);
+    if ( (long)mcb2 + sizeof(struct mcb) - orig_blk_start_addr
+        == (long)mcb2 + sizeof(struct mcb) - mcb2->start_addr +  (long)mcb1 + sizeof(struct mcb) - mcb1->start_addr) {
+        printf_bochs("space is not missing\n");
+    }
+    else {
+        printf_bochs("!!!!!!!!!!!!!!!!!!! space lost!!!!!!!!!!!!!!!!!!!!!\n");
+    }
+
+    /* add mcb1, mcb2 into memblks_by_add, because I split mcb1, mcb2
+     * from orig_blk, so mcb1, mcb2 is continus on address
+     */
+    p_mcb1 = &(mcb1->memblk_addr_list_node);
+    p_mcb2 = &(mcb2->memblk_addr_list_node);
+    list_add(p_mcb1, &memblks_by_addr);
+
+    // add mcb1, mcb2 into memblks_by_size
+    p_mcb1 = &(mcb1->memblk_size_list_node);
+    p_mcb2 = &(mcb2->memblk_size_list_node);
+    list_del(p_mcb2, &memblks_by_size);
+
+    if ( (&memblks_by_size)->next == (&memblks_by_size) ) {
+        printf_bochs("no memblk in memblks_by_size list\n");
+        list_add(p_mcb1, &memblks_by_size );
+        list_add(p_mcb2, &memblks_by_size );
+        return mcb2;
+    }
+
+    // if come here, at least there are 2 memblk in memblks_by_size list
+    insert_sort_by_size( p_mcb1, &memblks_by_size );
+    insert_sort_by_size( p_mcb2, &memblks_by_size );
+
+    return mcb2;
+}
+
+static void try_merge(struct list_head *mid)
+{
+    struct list_head *prev, *next;
+    struct mcb *prev_mcb, *mid_mcb, *next_mcb;
+
+    mid_mcb = list_entry(mid, struct mcb, memblk_addr_list_node);
+    printf_bochs("-----try merge %p\n", mid_mcb);
+
+    prev = mid->prev;
+    next = mid->next;
+
+    if ( mid->prev == &memblks_by_addr ) {
+        next_mcb = list_entry(next, struct mcb, memblk_addr_list_node);
+        if ( next_mcb->available ) {
+            next_mcb->start_addr = mid_mcb->start_addr;
+            list_del(mid);
+            list_del(&(mid_mcb->memblk_size_list_node));
+            list_del(&(next_mcb->memblk_size_list_node));
+            insert_sort_by_size(&(next_mcb->memblk_size_list_node), &memblks_by_size);
+        }
+        return;
+    }
+
+    if ( mid->next == &memblks_by_addr ) {
+        prev_mcb = list_entry(prev, struct mcb, memblk_addr_list_node);
+        if ( prev_mcb->available ) {
+            printf_bochs("%s %x\n", __FUNCTION__, __LINE__);
+            mid_mcb->start_addr = prev_mcb->start_addr;
+            print_memblks_addr_list();
+            list_del(prev);
+            print_memblks_addr_list();
+            list_del(&(prev_mcb->memblk_size_list_node));
+            list_del(&(mid_mcb->memblk_size_list_node));
+            insert_sort_by_size(&(mid_mcb->memblk_size_list_node), &memblks_by_size);
+
+        }
+        return;
+    }
+
+    if ( mid->prev != &memblks_by_addr && mid->next != &memblks_by_addr ) {
+        prev_mcb = list_entry(prev, struct mcb, memblk_addr_list_node);
+        next_mcb = list_entry(next, struct mcb, memblk_addr_list_node);
+        if ( prev_mcb->available && next_mcb->available ) {
+            next_mcb->start_addr = prev_mcb->start_addr;
+            list_del(prev);
+            list_del(mid);
+            list_del(&(prev_mcb->memblk_size_list_node));
+            list_del(&(mid_mcb->memblk_size_list_node));
+            list_del(&(next_mcb->memblk_size_list_node));
+            insert_sort_by_size(&(next_mcb->memblk_size_list_node), &memblks_by_size);
+        }
+        if ( !prev_mcb->available && next_mcb->available ) {
+            next_mcb->start_addr = mid_mcb->start_addr;
+            list_del(mid);
+            list_del(&(mid_mcb->memblk_size_list_node));
+            list_del(&(next_mcb->memblk_size_list_node));
+            insert_sort_by_size(&(next_mcb->memblk_size_list_node), &memblks_by_size);
+        }
+        if ( prev_mcb->available && !next_mcb->available ) {
+            mid_mcb->start_addr = prev_mcb->start_addr;
+            list_del(prev);
+            list_del(&(prev_mcb->memblk_size_list_node));
+            list_del(&(mid_mcb->memblk_size_list_node));
+            insert_sort_by_size(&(mid_mcb->memblk_size_list_node), &memblks_by_size);
+        }
+        if ( !prev_mcb->available && !next_mcb->available ) {
+        }
+        return;
+    }
+}
+
+void pfree(void *ptr)
+{
+    struct list_head *p;
+    struct mcb *blk;
+
+    printf_bochs("try to free %p\n", ptr);
+    list_for_each(p, &memblks_by_addr)
     {
-        curr_memblk->size += sizeof(struct memblk_head) + next_memblk->size;
-        verbose( "merge %p and %p, newsize:%x\n", curr_memblk, next_memblk, curr_memblk->size );
-        p->next = p->next->next;
-        p->next->prev = p;
-
-        {   // change element in memblk_size list
-            struct list_head *p1, *p2, *newp;
-            p1 = &(curr_memblk->memblk_size_list_node);
-            p2 = &(next_memblk->memblk_size_list_node);
-            newp = &(curr_memblk->memblk_size_list_node);
-            list_del(p1);
-            list_del(p2);
-            insert_sort_by_size(newp, &memblks_size);
+        blk = list_entry(p, struct mcb, memblk_addr_list_node);
+        if ( blk && blk->start_addr == (long)ptr ) {
+            blk->available = 1;
+            break;
         }
     }
-}
-
-void free(void *ptr)
-{
-    struct memblk_head *blk;
-
-    blk = ((struct memblk_head *)ptr) - 1 ;
-    blk->available = 1;
-
-    verbose("free %p, blk at:%p\n", ptr, blk);
 
     try_merge( &(blk->memblk_addr_list_node) );
 }
 
-static struct memblk_head* find_first_proper_memblk(u32int size) {
+static struct mcb* find_first_proper_memblk(u32int size, int align) {
     struct list_head *p;
-    struct memblk_head *new_blk;
+    struct mcb *blk;
 
-    list_for_each(p, &memblks_size) {
-        new_blk = list_entry(p, struct memblk_head, memblk_size_list_node);
-        if ( new_blk->available && new_blk->size >= sizeof(struct memblk_head) + size ) {
-            return new_blk;
+    list_for_each(p, &memblks_by_size) {
+        blk = list_entry(p, struct mcb, memblk_size_list_node);
+        if ( blk && blk->available
+            && ((long)blk - blk->start_addr) >= sizeof(struct mcb) + size ) {
+            if(align) {
+                u32int start;
+                //aligned start
+                start = ( (long)blk - size ) & 0xFFFF1000;
+                if (start >= blk->start_addr)
+                    return blk;
+            } else
+                return blk;
         }
     }
     return 0;
 }
 
-void *malloc(u32int size)
+void *pmalloc(u32int size, int align)
 {
-    struct memblk_head *orig_blk;
-    struct memblk_head *new_blk;
+    struct mcb *orig_blk;
+    struct mcb *new_blk;
 
     if ( size <= 0 )
         return 0;
 
-    orig_blk = find_first_proper_memblk(size);
+    orig_blk = find_first_proper_memblk(size, align);
 
     if (orig_blk) {
-        new_blk = split_from(orig_blk, size);
-        return(void *)(new_blk+1);
-    } else {
-        // no proper blk
+        new_blk = split_from(orig_blk, size, align);
+        if(new_blk) {
+            printf_bochs("return ptr:%p\n", (void*) (new_blk->start_addr) );
+            return (void*) (new_blk->start_addr);
+        }
+        printf_bochs("no proper blk\n");
         return 0;
     }
+    printf_bochs("no proper blk\n");
+    return -1;
 }

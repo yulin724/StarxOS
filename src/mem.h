@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-void *malloc(u32int size);
-void free(void *ptr);
+void *pmalloc(u32int size, int align);
+void pfree(void *ptr);
 
 #endif

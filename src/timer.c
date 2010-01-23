@@ -8,7 +8,7 @@ static void timer_callback(struct registers regs)
 {
     tick++;
     putchar_at_screen_row_col(0, 0, 78, COLOR_BLUE | COLOR_BLACK<<4, tick%10+48);
-    printf_bochs("%x\n", tick);
+    //printf_bochs("%x\n", tick);
 }
 
 void init_timer(u32int freq)

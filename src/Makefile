@@ -8,7 +8,8 @@ ASFLAGS=-felf
 BUILD_DIR=../output
 
 SOURCES=boot.o kernel.o screen.o port.o stdio.o string.o gdt_idt.o \
-		gdt_idt_asm.o timer.o irq.o mem.o list.o emulator.o test.o
+		gdt_idt_asm.o timer.o irq.o mem.o list.o emulator.o test.o \
+		page.o
 
 
 all: $(SOURCES) link

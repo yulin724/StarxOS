@@ -9,14 +9,16 @@ void test_mem()
     printf_bochs("test memory\n");
     printf_bochs("-------------------------------------------------\n");
     printf_bochs("Before test_mem\n");
-    print_memblk_list(1);
+    print_memblks_size_list();
+    print_memblks_addr_list();
     for(i=0;i<25;i++) {
-        ptr = malloc(2*(i%5));
+        ptr = pmalloc(2*(i%5), 1);
         if(ptr)
-            free(ptr);
+            pfree(ptr);
     }
     printf_bochs("After test_mem\n");
-    print_memblk_list(1);
+    print_memblks_size_list();
+    print_memblks_addr_list();
     printf_bochs("\n");
     printf_bochs("-------------------------------------------------\n");
 }
