@@ -4,7 +4,7 @@
 
 irq_service_t irq_services[256];
 
-void irq_default(struct registers reg)
+static void irq_default(struct registers reg)
 {
     printf("irq service is not been implemented.\n");
 }

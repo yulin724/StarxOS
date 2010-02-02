@@ -3,7 +3,7 @@
 
 #include "type_alias.h"
 
-//void *memset(void *s, u8int c, u32int count);
+void *memset(void *s, u8int c, u32int count);
 
 void *memcpy(void *dest, const void *src, int count);
 

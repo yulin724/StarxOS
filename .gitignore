@@ -10,3 +10,4 @@ a.out
 *.cpp
 *.sym
 *save
+*.img

@@ -16,6 +16,8 @@ struct page_directory_entry {
 typedef struct page_directory_entry page_directory_entry_t;
 typedef struct page_directory_entry page_table_entry_t;
 
-int init_page(u32int lower, u32int upper);
+int init_paging();
+
+void set_pte_v2p(u32int vaddr, u32int pfn);
 
 #endif

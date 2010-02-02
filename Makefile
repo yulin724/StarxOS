@@ -30,4 +30,4 @@ qemu: update
 
 bochs: update
 	#/usr/bin/bochs
-	bochs -f bochsrc_term -q
+	/usr/local/bin/bochs -f bochsrc_term -q

@@ -22,7 +22,7 @@ void putchar_at_screen(int index, u8int color, u8int c);
 //void putchar(u8int c);
 
 void putstring_at_screen(int index, u8int color, char *string);
-void putstring(u8int *string);
+void putstring(char *string);
 
 void move_cursor(u16int row, u16int col);
 

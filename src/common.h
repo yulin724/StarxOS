@@ -10,6 +10,6 @@
 #include "stdio.h"
 #include "screen.h"
 
-
+void panic();
 
 #endif /* COMMON_H */

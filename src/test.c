@@ -3,9 +3,9 @@
 #include "mem.h"
 void test_mem()
 {
+    /*
     int i;
     void *ptr;
-
     printf_bochs("test memory\n");
     printf_bochs("-------------------------------------------------\n");
     printf_bochs("Before test_mem\n");
@@ -21,4 +21,5 @@ void test_mem()
     print_memblks_addr_list();
     printf_bochs("\n");
     printf_bochs("-------------------------------------------------\n");
+    */
 }

@@ -9,7 +9,6 @@ static void u32int2hex(char *str, u32int val)
     char *rslt;             //0xFFFFFFFF\0
     int pos=9;
     u32int dv;
-    u32int i;
 
     rslt = str;
     tmp = val;
@@ -35,7 +34,7 @@ int sprintf(char *str, const char *format, ...)
 
     char hexstring[11]="0x00000000";
 
-    if (str==1)
+    if ((u32int)str==1)
         dp = buffer;
     else if ( str == 0)
         dp = buffer;
@@ -97,7 +96,7 @@ int sprintf(char *str, const char *format, ...)
     *dp='\0';
     if (str==0)
         putstring(buffer);
-    else if (str==1)
+    else if ((u32int)str==1)
         putstring_bochsconsole(buffer);
 
     return 0;

@@ -1,7 +1,7 @@
 CC=gcc
 
 CFLAGS=-O0 -Wall -Wextra -Werror -nostdlib -nostartfiles -nodefaultlibs -I.
-CFLAGS=-O0 -nostdlib -nostartfiles -nodefaultlibs -I. -fno-builtin
+CFLAGS=-O0 -Wall -nostdlib -nostartfiles -nodefaultlibs -I. -fno-builtin
 LDFLAGS=-Tlinker.ld
 ASFLAGS=-felf
 
@@ -9,7 +9,7 @@ BUILD_DIR=../output
 
 SOURCES=boot.o kernel.o screen.o port.o stdio.o string.o gdt_idt.o \
 		gdt_idt_asm.o timer.o irq.o mem.o list.o emulator.o test.o \
-		page.o page_asm.o
+		page.o page_asm.o common.o kheap.o
 
 
 all: $(SOURCES) link

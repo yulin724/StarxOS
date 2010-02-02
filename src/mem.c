@@ -10,11 +10,14 @@ struct mcb {
 struct list_head memblks_by_size;
 struct list_head memblks_by_addr;
 
-u32int heap;
 
-void panic() {
-    bochs_shutdown();
-}
+extern u32int _brk_base;
+u32int _brk_start;
+u32int _brk_end;
+
+u32int *frame_bitmap;
+u32int frame_nr;
+
 
 void print_memblks_addr_list()
 {
@@ -75,7 +78,6 @@ void init_memblk(u32int mem_lower, u32int mem_upper)
     verbose("init_mem\n");
 
     whole_size = mem_upper - mem_lower;
-    heap = mem_upper;
 
     first_memblk = (struct mcb *)( mem_lower + whole_size - sizeof(struct mcb) );
     memset(first_memblk, 0, sizeof(struct mcb));
@@ -120,7 +122,7 @@ struct mcb* split_from(struct mcb *orig_blk, u32int size, int align)
     u32int orig_blk_start_addr;
     u32int orig_blk_available;
 
-    struct list_head *p, *p_mcb1, *p_mcb2;
+    struct list_head *p_mcb1, *p_mcb2;
 
     orig_blk_start_addr = orig_blk->start_addr;
     orig_blk_available = orig_blk->available;
@@ -163,7 +165,7 @@ struct mcb* split_from(struct mcb *orig_blk, u32int size, int align)
     // add mcb1, mcb2 into memblks_by_size
     p_mcb1 = &(mcb1->memblk_size_list_node);
     p_mcb2 = &(mcb2->memblk_size_list_node);
-    list_del(p_mcb2, &memblks_by_size);
+    list_del(p_mcb2);
 
     if ( (&memblks_by_size)->next == (&memblks_by_size) ) {
         printf_bochs("no memblk in memblks_by_size list\n");
@@ -309,5 +311,99 @@ void *pmalloc(u32int size, int align)
         return 0;
     }
     printf_bochs("no proper blk\n");
-    return -1;
+    return (void*)0;
+}
+
+#define INDEX_FROM_BIT(a) (a/(8*4))
+#define OFFSET_FROM_BIT(a) (a%(8*4))
+
+static void set_frame(u32int frame_addr)
+{
+   u32int frame = frame_addr/0x1000;
+   u32int idx = INDEX_FROM_BIT(frame);
+   u32int off = OFFSET_FROM_BIT(frame);
+   frame_bitmap[idx] |= (0x1 << off);
+}
+
+static void clear_frame(u32int frame_addr)
+{
+   u32int frame = frame_addr/0x1000;
+   u32int idx = INDEX_FROM_BIT(frame);
+   u32int off = OFFSET_FROM_BIT(frame);
+   frame_bitmap[idx] &= ~(0x1 << off);
+}
+
+static u32int test_frame(u32int frame_addr)
+{
+   u32int frame = frame_addr/0x1000;
+   u32int idx = INDEX_FROM_BIT(frame);
+   u32int off = OFFSET_FROM_BIT(frame);
+   return (frame_bitmap[idx] & (0x1 << off));
+}
+
+// Static function to find the first free frame.
+static u32int first_frame()
+{
+   u32int i, j;
+   for (i = 0; i < INDEX_FROM_BIT(frame_nr); i++)
+   {
+       if (frame_bitmap[i] != 0xFFFFFFFF) // nothing free, exit early.
+       {
+           // at least one bit is free here.
+           for (j = 0; j < 32; j++)
+           {
+               u32int toTest = 0x1 << j;
+               if ( !(frame_bitmap[i]&toTest) )
+               {
+                   return i*4*8+j;
+               }
+           }
+       }
+   }
+
+   return -1;
+}
+
+void setup_memory(u32int mem_lower, u32int mem_upper)
+{
+    u32int addr;
+
+    _brk_start = _brk_end = _brk_base;
+    frame_bitmap = (u32int *)_brk_end;
+    printf_bochs("frame_bitmap @ %x\n", frame_bitmap);
+
+    frame_nr = mem_upper / 0x1000;
+    _brk_end = _brk_end + frame_nr / 8 + 1;
+
+    memset(frame_bitmap, 0, _brk_end - (u32int)frame_bitmap);
+
+    for(addr=0; addr < _brk_end; addr+=0x1000) {
+        set_frame(addr);
+    }
+}
+
+void *alloc_bootmem(u32int size, int align)
+{
+    u32int ret;
+
+    if (align)
+        _brk_end = (_brk_end + 0x1000) & 0xFFFFF000;
+
+    ret = _brk_end;
+    set_frame(ret);
+
+    _brk_end += size;
+
+    return (void*)ret;
+}
+
+u32int alloc_page_pfn()
+{
+    u32int pfn;
+
+    // find first free frame
+    pfn = first_frame();
+    set_frame(pfn<<12);
+
+    return pfn;
 }

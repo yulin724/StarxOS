@@ -1,5 +1,7 @@
 ﻿#include "common.h"
 
+#include "port.h"
+
 #define MAX_SCREEN_NUMBER 4
 
 #define ROW_START 0
@@ -22,7 +24,7 @@ struct screen_struct {
 
 static int current_screen_index=0;
 static char *video_mem=(char*)0xB8000;
-static struct screen_struct screens[MAX_SCREEN_NUMBER] = {0};
+static struct screen_struct screens[MAX_SCREEN_NUMBER];
 
 void screen_init_early()
 {
@@ -186,7 +188,7 @@ void putstring_at_screen(int index, u8int color, char *string)
     }
 }
 
-void putstring(u8int *string)
+void putstring(char *string)
 {
     putstring_at_screen(current_screen_index, screens[current_screen_index].color, string);
 }

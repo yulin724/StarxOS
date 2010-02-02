@@ -2,6 +2,7 @@
 #include "desc_defs.h"
 #include "register.h"
 #include "irq.h"
+#include "port.h"
 
 #define GDT_ENTRY_MAX 5
 #define IDT_ENTRY_MAX 256
@@ -25,6 +26,10 @@ extern long idt_handlers[];
 
 extern irq_service_t irq_services[IDT_ENTRY_MAX];
 
+extern void initialize_8259a(void);
+extern void load_gdt(void*);
+extern void load_idt(void*);
+
 void initialize_gdt()
 {
     struct desc_ptr desc_ptr;
@@ -37,8 +42,6 @@ void initialize_gdt()
 
     load_gdt(&desc_ptr);
 }
-
-
 
 void initialize_idt()
 {
