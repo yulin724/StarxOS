@@ -27,7 +27,7 @@ int init_page(u32int lower, u32int upper)
     memset(page_directory, 0, total_size_of_page_tables);
     page_tables = (u32int *)page_directory + 0x1000;
     printf_bochs("page_directory at %x, page_table at %x\n",
-        page_directory, page_tables);
+                 page_directory, page_tables);
 
 /*
 struct page_directory_entry {
@@ -42,7 +42,7 @@ struct page_directory_entry {
     u32int page_frame_address:20;
 } __attribute__((packed));
 */
-    for(addr = 0; addr < heap+0x400000*2 ; addr += 0x1000) {
+    for (addr = 0; addr < heap+0x400000*2 ; addr += 0x1000) {
         u32int pd_index;
         u32int pt_index;
         page_directory_entry_t pde;
@@ -54,7 +54,7 @@ struct page_directory_entry {
 
         page_table = (u32int *) ( (long)page_tables + 0x1000 * pd_index );
 
-        if(!page_directory[pd_index]) {
+        if (!page_directory[pd_index]) {
             pde.present = 1;
             pde.read_or_write = 1;
             pde.level = 0;
@@ -64,12 +64,12 @@ struct page_directory_entry {
             pde.reserved2 = 0;
             pde.avail = 0;
             pde.page_frame_address = (long)page_table / 0x1000; // addr/4k
-            page_directory[pd_index] = pde.page_frame_address << 20 | 0x23 ;
+            page_directory[pd_index] = pde.page_frame_address << 20 | 23 ;
             printf_bochs("page_table at %x\n", page_table);
             printf_bochs("page_directory[%x]=%x\n", pd_index, page_directory[pd_index]);
         }
 
-        if(!page_table[pt_index]) {
+        if (!page_table[pt_index]) {
             pte.present = 1;
             pte.read_or_write = 1;
             pte.level = 0;
@@ -79,10 +79,37 @@ struct page_directory_entry {
             pte.reserved2 = 0;
             pte.avail = 0;
             pte.page_frame_address = addr / 0x1000; // addr/4k
-            page_tables[pt_index] = pte.page_frame_address << 20 | 0x23 ;
-            printf_bochs( "page_tables[%x]=%x\n", pt_index, page_tables[pt_index] );
+            page_tables[pt_index] = pte.page_frame_address << 20 | 23 ;
+            //printf_bochs( "page_tables[%x]=%x\n", pt_index, page_tables[pt_index] );
         }
+    }
+    {
+        u32int cr0;
 
+        cr0 = read_cr0();
+        printf_bochs("cr0: %x\n", cr0);
+    }
+
+    {
+        u32int cr3;
+        
+        cr3 = read_cr3();
+        printf_bochs("cr3: %x\n", cr3);
+    }
+
+    {
+        u32int cr3;
+
+        cr3 = write_cr3(page_directory);
+        printf_bochs("changed cr3: %x\n", cr3);
+    }
+
+    {
+        u32int cr0;
+        cr0 = read_cr0();
+        cr0 |= 0x80000000;
+        write_cr0( cr0 );
+        printf_bochs("changed cr0: %x\n", cr0);
     }
     return 0;
 }
