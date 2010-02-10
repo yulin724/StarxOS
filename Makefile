@@ -31,3 +31,6 @@ qemu: update
 bochs: update
 	#/usr/bin/bochs
 	/usr/local/bin/bochs -f bochsrc_term -q
+
+peter-bochs: update
+	java -jar tools/peter-bochs-debugger20100203.jar /usr/local/bin/bochs -f bochsrc_peter_bochs
